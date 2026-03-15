@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>캐치테이블 채용공고 생성기</title>
+<style>
+  :root {
+    --primary: #FF5A00;
+    --primary-light: #FFF3ED;
+    --dark: #1A1A1A;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --white: #FFFFFF;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif;
+    background: var(--gray-50);
+    color: var(--dark);
+    line-height: 1.6;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+  header { text-align: center; margin-bottom: 40px; }
+  header h1 { font-size: 28px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+  header p { color: var(--gray-600); font-size: 15px; }
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 28px; }
+  .panel-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+  .panel-title .badge { background: var(--primary); color: white; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+  .form-group label .required { color: var(--primary); margin-left: 2px; }
+  .form-group label .hint { font-weight: 400; color: var(--gray-400); font-size: 12px; margin-left: 4px; }
+  input[type="text"], select {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--gray-200);
+    border-radius: 8px; font-size: 14px; color: var(--dark); background: var(--white); transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,90,0,0.1);
+  }
+  textarea {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--gray-200); border-radius: 8px;
+    font-size: 14px; color: var(--dark); background: var(--white); resize: vertical;
+    min-height: 100px; font-family: inherit; line-height: 1.6; transition: border-color 0.2s;
+    tab-size: 4;
+  }
+  .type-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+  .type-btn {
+    flex: 1; padding: 12px; border: 2px solid var(--gray-200); border-radius: 10px;
+    background: var(--white); cursor: pointer; text-align: center; transition: all 0.2s;
+    font-size: 14px; font-weight: 600; color: var(--gray-600);
+  }
+  .type-btn:hover { border-color: var(--gray-300); }
+  .type-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+  .type-btn .sub { display: block; font-size: 11px; font-weight: 400; color: var(--gray-400); margin-top: 2px; }
+  .type-btn.active .sub { color: var(--primary); opacity: 0.7; }
+  .generate-btn {
+    width: 100%; padding: 14px; background: var(--primary); color: white; border: none;
+    border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px;
+  }
+  .generate-btn:hover { background: #E64E00; }
+  .output-panel { position: sticky; top: 24px; }
+  .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .copy-btn, .edit-benefit-btn {
+    padding: 8px 16px; background: var(--gray-100); border: 1px solid var(--gray-200);
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--gray-700); transition: all 0.2s;
+  }
+  .copy-btn:hover, .edit-benefit-btn:hover { background: var(--gray-200); }
+  .copy-btn.copied { background: #ECFDF5; border-color: #6EE7B7; color: #059669; }
+  .output-area {
+    background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 10px;
+    padding: 20px; font-size: 13.5px; line-height: 1.8; white-space: pre-wrap;
+    word-break: break-word; max-height: 80vh; overflow-y: auto; color: var(--gray-800);
+  }
+  .output-area .placeholder { color: var(--gray-400); text-align: center; padding: 60px 20px; font-size: 14px; }
+  .divider { border: none; border-top: 1px solid var(--gray-200); margin: 20px 0; }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .info-box { background: var(--primary-light); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--gray-700); line-height: 1.6; margin-bottom: 20px; }
+
+  /* 모달 */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 16px; width: 680px; max-width: 95vw;
+    max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--gray-200);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .modal-close {
+    background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-400);
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .modal-close:hover { background: var(--gray-100); color: var(--gray-700); }
+  .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .modal-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .modal-tab {
+    padding: 8px 16px; border: 1px solid var(--gray-200); border-radius: 8px;
+    background: var(--white); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--gray-600);
+  }
+  .modal-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .modal-textarea {
+    width: 100%; min-height: 300px; padding: 14px; border: 1px solid var(--gray-200);
+    border-radius: 10px; font-size: 13px; font-family: inherit; line-height: 1.8;
+    resize: vertical; color: var(--gray-800);
+  }
+  .modal-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,90,0,0.1); }
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--gray-200);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .modal-btn {
+    padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  }
+  .modal-btn.secondary { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); }
+  .modal-btn.secondary:hover { background: var(--gray-200); }
+  .modal-btn.primary { background: var(--primary); color: white; }
+  .modal-btn.primary:hover { background: #E64E00; }
+  .modal-btn.danger { background: var(--white); color: #EF4444; border: 1px solid #FCA5A5; font-size: 13px; }
+  .modal-btn.danger:hover { background: #FEF2F2; }
+  .btn-group { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>캐치테이블 채용공고 생성기</h1>
+    <p>입력하고 생성 버튼을 누르면 바로 복붙 가능한 공고가 만들어집니다</p>
+  </header>
+
+  <div class="layout">
+    <!-- 입력 패널 -->
+    <div class="panel">
+      <div class="panel-title">입력 <span class="badge">FORM</span></div>
+
+      <!-- 고용 형태 -->
+      <div class="section-label">고용 형태</div>
+      <div class="type-selector">
+        <button class="type-btn active" data-type="정규직" onclick="selectType(this)">
+          정규직
+          <span class="sub">전체 복지 적용</span>
+        </button>
+        <button class="type-btn" data-type="계약직" onclick="selectType(this)">
+          계약직
+          <span class="sub">복지 일부 제외</span>
+        </button>
+        <button class="type-btn" data-type="인턴" onclick="selectType(this)">
+          인턴
+          <span class="sub">복지 일부 제외</span>
+        </button>
+      </div>
+      <div style="text-align:right; margin-top:-12px; margin-bottom:16px; display:flex; justify-content:flex-end; gap:6px;">
+        <button class="edit-benefit-btn" onclick="openBenefitModal()">복지 내용 편집</button>
+        <button class="edit-benefit-btn" onclick="openNoticeModal()">유의사항 편집</button>
+      </div>
+
+      <hr class="divider">
+
+      <!-- 핵심 콘텐츠 -->
+      <div class="section-label">핵심 콘텐츠</div>
+
+      <div class="form-group">
+        <label>주요 업무 <span class="required">*</span> <span class="hint">(줄바꿈으로 구분, 탭으로 하위 항목)</span></label>
+        <textarea id="mainTasks" rows="6" placeholder="B2B 온라인 영업 전략 수립 및 실행&#10;&#9;B2B 고객의 Pain Point 분석을 통한 문제 해결 전략 수립&#10;&#9;영업 성과 증대를 위한 액션 플랜 기획 및 실행&#10;퍼널 및 성과 관리&#10;&#9;목표 달성을 위한 파이프라인 설계 및 관리&#10;&#9;전환율 하락 구간 원인 분석 및 개선안 도출"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>자격 요건 <span class="required">*</span> <span class="hint">(줄바꿈으로 구분, 탭으로 하위 항목)</span></label>
+        <textarea id="requirements" rows="5" placeholder="서비스 기획 및 운영 경험 3년 이상 보유&#10;고객경험 개선 서비스 기획(PM) 경험&#10;데이터 기반 문제 정의 및 개선 방안 수립 가능"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>우대 사항 <span class="hint">(줄바꿈으로 구분, 탭으로 하위 항목)</span></label>
+        <textarea id="preferred" rows="4" placeholder="외식업, 예약, 커머스 등 유사 서비스 도메인 경험&#10;데이터 기반 서비스 KPI 설계·운영 경험"></textarea>
+      </div>
+
+      <hr class="divider">
+
+      <!-- 합류 여정 -->
+      <div class="section-label">합류 여정</div>
+
+      <div class="info-box">
+        기본 프로세스가 미리 선택되어 있습니다. 필요한 항목을 추가/제거하세요.
+      </div>
+
+      <div class="form-group" style="display:flex; flex-wrap:wrap; gap:8px;">
+        <label style="width:100%;">채용 프로세스 단계 (체크)</label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="서류 접수" checked> 서류 접수
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="코딩 테스트"> 코딩 테스트
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="과제 전형"> 과제 전형
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="직무 적합성 검사" checked> 직무 적합성 검사
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="1차 인터뷰" checked> 1차 인터뷰
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="2차 인터뷰" checked> 2차 인터뷰
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="레퍼런스 체크" checked> 레퍼런스 체크
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="처우 협의" checked> 처우 협의
+        </label>
+        <label style="font-weight:400; font-size:13px; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" class="process-step" value="최종 합격 및 입사" checked> 최종 합격 및 입사
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>프로세스 참고사항 <span class="hint">(선택)</span></label>
+        <textarea id="processNote" rows="2" style="min-height:50px" placeholder="예: 1차 인터뷰 시 주요 프로젝트 1건 추가 자료 요청 가능"></textarea>
+      </div>
+
+      <hr class="divider">
+
+      <!-- 추가 섹션 -->
+      <div class="section-label">추가 섹션 (선택)</div>
+
+      <div class="form-group">
+        <label>기술 스택 <span class="hint">(Engineering/Data 직군용, 줄바꿈으로 구분)</span></label>
+        <textarea id="techStack" rows="3" style="min-height:60px" placeholder="언어: Java, Kotlin, Python&#10;프레임워크: Spring, Gradle&#10;인프라: AWS, GCP, Kubernetes"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-top:4px;">
+        <label style="font-weight:400; font-size:14px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="includeCompanyIntro"> 회사 소개 포함
+        </label>
+      </div>
+
+      <button class="generate-btn" onclick="generate()">공고 생성하기</button>
+    </div>
+
+    <!-- 출력 패널 -->
+    <div class="panel output-panel">
+      <div class="output-header">
+        <div class="panel-title" style="margin-bottom:0;">미리보기 <span class="badge">OUTPUT</span></div>
+        <button class="copy-btn" onclick="copyOutput()">복사하기</button>
+      </div>
+      <div class="output-area" id="outputArea">
+        <div class="placeholder">왼쪽 폼을 채우고 "공고 생성하기" 버튼을 누르세요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 복지 편집 모달 -->
+<div class="modal-overlay" id="benefitModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>복지 내용 편집</h2>
+      <button class="modal-close" onclick="closeBenefitModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="정규직" onclick="switchBenefitTab(this)">정규직</button>
+        <button class="modal-tab" data-tab="계약직" onclick="switchBenefitTab(this)">계약직</button>
+        <button class="modal-tab" data-tab="인턴" onclick="switchBenefitTab(this)">인턴</button>
+      </div>
+      <textarea class="modal-textarea" id="benefitEditor"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn danger" onclick="resetBenefits()">기본값으로 초기화</button>
+      <div style="flex:1;"></div>
+      <button class="modal-btn secondary" onclick="closeBenefitModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveBenefits()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 유의사항 편집 모달 -->
+<div class="modal-overlay" id="noticeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>유의사항 편집</h2>
+      <button class="modal-close" onclick="closeNoticeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <textarea class="modal-textarea" id="noticeEditor"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn danger" onclick="resetNotice()">기본값으로 초기화</button>
+      <div style="flex:1;"></div>
+      <button class="modal-btn secondary" onclick="closeNoticeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedType = '정규직';
+let currentBenefitTab = '정규직';
+
+// ── 기본 유의사항 텍스트 ──
+const DEFAULT_NOTICE = `[유의 사항]
+- 제출 자료와 채용 프로세스 전반에서 허위사실 및 결격사유가 발견될 경우 채용이 취소될 수 있습니다.
+- 모든 공고는 수시채용으로, 합격자가 발생할 경우 조기 마감될 수 있습니다.
+- 채용 포지션에 따라 프로세스가 변경 또는 추가될 수 있습니다.`;
+
+// ── 기본 회사 소개 텍스트 ──
+const COMPANY_INTRO = `"즐거운 미식생활의 시작, 캐치테이블"
+
+누군가에는 설레는 약속이고, 또 다른 이에게는 중요한 비즈니스의 시작입니다.
+그 중요한 순간들이 더 즐겁고 간편해지도록, 캐치테이블은 예약, 웨이팅, 포스, 픽업, 결제까지 아우르는 '역사상 최초의 요식업 슈퍼플랫폼'을 만들어 나가고 있습니다.
+
+- 국내 1위 레스토랑 예약 서비스
+- 실시간 웨이팅 시스템 '캐치테이블 웨이팅'
+- B2C & B2B 올인원 통합 솔루션
+- 예약금 0원 '캐치페이'
+- 티맵 연동
+- AI 레스토랑 추천
+- 글로벌 예약 (일본)
+- 요식업 슈퍼플랫폼으로 진화: MAU 500만 달성, 천만 고객 돌파`;
+
+// ── localStorage 유의사항 관리 ──
+function loadNotice() {
+  return localStorage.getItem('catchtable_notice') || DEFAULT_NOTICE;
+}
+function saveNoticeToStorage(text) {
+  localStorage.setItem('catchtable_notice', text);
+}
+let notice = loadNotice();
+
+function openNoticeModal() {
+  document.getElementById('noticeEditor').value = notice;
+  document.getElementById('noticeModal').classList.add('open');
+}
+function closeNoticeModal() {
+  document.getElementById('noticeModal').classList.remove('open');
+}
+function saveNotice() {
+  notice = document.getElementById('noticeEditor').value;
+  saveNoticeToStorage(notice);
+  closeNoticeModal();
+  alert('저장되었습니다.');
+}
+function resetNotice() {
+  if (!confirm('유의사항을 기본값으로 되돌리시겠습니까?')) return;
+  notice = DEFAULT_NOTICE;
+  document.getElementById('noticeEditor').value = notice;
+}
+
+// ── 기본 복지 텍스트 ──
+const DEFAULT_BENEFITS = {
+  '정규직': `[혜택 및 복지]
+당신의 성장이 곧 캐치테이블의 성장
+- 독서모임을 위한 도서 및 직무 관련 도서, 세미나, 컨퍼런스 등 교육비 지원
+- 미식생활을 즐기는 자가 미식문화를 선도할 수 있음에 연간 캐치포인트 100만원 지원
+- 장기근속 포상 휴가 및 휴가비 지원
+  - 3년: 5일, 100만원
+  - 5년, 7년: 10일, 300만원
+  - 10년: 20일, 500만원
+
+일에만 집중할 수 있도록
+- 추가근무수당(1시간당 15,000원) 및 택시비(오후 11시 퇴근 경우) 지원
+- 점심 식사, 추가 근무의 경우 저녁 식사 지원
+- 다양한 음료와 간식, 커피 무제한 제공
+- 최고사양 IT 자산 지급
+- 넓은 오피스 및 편한 인프라 환경을 갖춘 판교 유스페이스 입주사
+- 선택적 근로시간제 운영(8~10시, 1시간 단위 출근시간 선택)
+- 정밀 건강 검진 2년에 1회 제공
+- 마음 건강 검진, 연간 4회 심리상담 지원
+- 복지를 편하게 이용하기 위한 개별 법인카드 지급
+
+소통&소통
+- 매월 랜덤으로 짝지어 점심 먹는 'Leaders Lunch Day'
+- 회사의 비전, 팀의 목표, 향후 계획 등을 CEO가 직접 공유하는 'Monthly Growth Meeting'
+- 개인의 성장에 집중하여 리더와 함께 이야기 나누는 'Monthly Feedback Meeting'
+- 신규 입사자 새로운 시작을 함께 도와주는 'Categorie'
+- 소통의 시너지를 위해 타 팀 구성원들과 함께하는 문화의 날 'Leaders Culture Day'
+
+기념일도 함께하는 캐치테이블
+- 생일 케이크, 생일 반차 및 상품권 지급
+- 명절(설날, 추석) 반차 및 상품권 지급`,
+
+  '인턴': `[혜택 및 복지]
+당신의 성장이 곧 캐치테이블의 성장
+- 독서모임을 위한 도서 및 직무 관련 도서, 세미나, 컨퍼런스 등 교육비 지원
+- 미식생활을 즐기는 자가 미식문화를 선도할 수 있음에 계약 기간 캐치포인트 50만원 지원
+
+일에만 집중할 수 있도록
+- 추가근무수당(1시간당 15,000원) 및 택시비(오후 11시 퇴근 경우) 지원
+- 점심 식사, 추가 근무의 경우 저녁 식사 지원
+- 다양한 음료와 간식, 커피 무제한 제공
+- 최고사양 IT 자산 지급
+- 넓은 오피스 및 편한 인프라 환경을 갖춘 판교 유스페이스 입주사
+- 복지를 편하게 이용하기 위한 개별 법인카드 지급
+
+소통&소통
+- 매월 랜덤으로 짝지어 점심 먹는 'Leaders Lunch Day'
+- 회사의 비전, 팀의 목표, 향후 계획 등을 CEO가 직접 공유하는 'Monthly Growth Meeting'
+- 개인의 성장에 집중하여 리더와 함께 이야기 나누는 'Monthly Feedback Meeting'
+- 소통의 시너지를 위해 타 팀 구성원들과 함께하는 문화의 날 'Leaders Culture Day'
+
+기념일도 함께하는 캐치테이블
+- 생일 케이크, 생일 반차 및 상품권 지급
+- 명절(설날, 추석) 반차 및 상품권 지급`,
+
+  '계약직': `[혜택 및 복지]
+당신의 성장이 곧 캐치테이블의 성장
+- 계약 기간 캐치포인트 50만원 지원
+
+일에만 집중할 수 있도록
+- 1일 12,000원 식대 지원
+- 당직 근무 시 택시비(오후 11시 퇴근 경우) 지원
+- 다양한 음료와 간식, 커피 무제한 제공
+- 최고사양 IT 자산 지급
+- 넓은 오피스 및 편한 인프라 환경을 갖춘 판교 유스페이스 입주사
+- 복지를 편하게 이용하기 위한 개별 법인카드 지급
+
+소통&소통
+- 매월 랜덤으로 짝지어 점심 먹는 'Leaders Lunch Day'
+
+기념일도 함께하는 캐치테이블
+- 명절(설날, 추석) 반차 및 상품권 지급`
+};
+
+// ── localStorage 복지 관리 ──
+function loadBenefits() {
+  const saved = localStorage.getItem('catchtable_benefits');
+  if (saved) {
+    try { return JSON.parse(saved); } catch(e) {}
+  }
+  return { ...DEFAULT_BENEFITS };
+}
+
+function saveBenefitsToStorage(benefits) {
+  localStorage.setItem('catchtable_benefits', JSON.stringify(benefits));
+}
+
+let benefits = loadBenefits();
+
+// ── 고용 형태 선택 ──
+function selectType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedType = btn.dataset.type;
+}
+
+// ── 복지 모달 ──
+function openBenefitModal() {
+  currentBenefitTab = selectedType;
+  document.querySelectorAll('.modal-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentBenefitTab);
+  });
+  document.getElementById('benefitEditor').value = benefits[currentBenefitTab];
+  document.getElementById('benefitModal').classList.add('open');
+}
+
+function closeBenefitModal() {
+  document.getElementById('benefitModal').classList.remove('open');
+}
+
+function switchBenefitTab(tab) {
+  // 탭 전환 전에 현재 편집 내용 임시 저장
+  benefits[currentBenefitTab] = document.getElementById('benefitEditor').value;
+  currentBenefitTab = tab.dataset.tab;
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('benefitEditor').value = benefits[currentBenefitTab];
+}
+
+function saveBenefits() {
+  benefits[currentBenefitTab] = document.getElementById('benefitEditor').value;
+  saveBenefitsToStorage(benefits);
+  closeBenefitModal();
+  alert('저장되었습니다.');
+}
+
+function resetBenefits() {
+  if (!confirm('현재 탭(' + currentBenefitTab + ')의 복지 내용을 기본값으로 되돌리시겠습니까?')) return;
+  benefits[currentBenefitTab] = DEFAULT_BENEFITS[currentBenefitTab];
+  document.getElementById('benefitEditor').value = benefits[currentBenefitTab];
+}
+
+// ── textarea에서 Tab 입력 허용 ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Tab' && e.target.tagName === 'TEXTAREA') {
+    e.preventDefault();
+    const ta = e.target;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    ta.value = ta.value.substring(0, start) + '\t' + ta.value.substring(end);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+  }
+});
+
+// ── 텍스트 → 번호/불릿 변환 (탭 인식) ──
+function formatLines(text) {
+  if (!text.trim()) return '';
+  const lines = text.split('\n');
+  let result = [];
+  let numCounter = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    if (raw.trim() === '') continue;
+
+    const isIndented = raw.startsWith('\t') || raw.match(/^  +\S/);
+    const clean = raw.replace(/^\t+/, '').replace(/^  +/, '').replace(/^[-•·]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+
+    if (isIndented) {
+      result.push(`- ${clean}`);
+    } else {
+      numCounter++;
+      result.push(`${numCounter}. ${clean}`);
+    }
+  }
+  return result.join('\n');
+}
+
+// ── 단순 불릿 변환 (탭 없는 필드용) ──
+function toBullets(text) {
+  if (!text.trim()) return '';
+  return text.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => {
+      const clean = line.replace(/^[-•·]\s*/, '');
+      return `- ${clean}`;
+    })
+    .join('\n');
+}
+
+// ── 탭 포함 여부 체크 ──
+function hasIndent(text) {
+  return text.split('\n').some(line => line.startsWith('\t') || line.match(/^  +\S/));
+}
+
+function getProcessSteps() {
+  const checked = document.querySelectorAll('.process-step:checked');
+  return Array.from(checked).map(cb => cb.value);
+}
+
+// ── 공고 생성 ──
+function generate() {
+  const mainTasks = document.getElementById('mainTasks').value.trim();
+  const requirements = document.getElementById('requirements').value.trim();
+  const preferred = document.getElementById('preferred').value.trim();
+  const processNote = document.getElementById('processNote').value.trim();
+  const techStack = document.getElementById('techStack').value.trim();
+
+  if (!mainTasks || !requirements) {
+    alert('필수 항목(*)을 모두 입력해주세요.');
+    return;
+  }
+
+  const steps = getProcessSteps();
+  if (steps.length === 0) {
+    alert('채용 프로세스 단계를 하나 이상 선택해주세요.');
+    return;
+  }
+
+  let output = '';
+
+  // 회사 소개 (체크 시에만)
+  if (document.getElementById('includeCompanyIntro').checked) {
+    output += COMPANY_INTRO + '\n\n';
+  }
+
+  // 합류 여정
+  output += `[캐치테이블 합류 여정]\n`;
+  output += steps.join(' > ') + '\n';
+  output += `※ 직무 적합성 검사는 채용의 참고 자료로만 활용되며, 합격 여부를 결정짓는 기준으로 사용되지 않습니다.\n`;
+  if (processNote) {
+    output += `※ ${processNote}\n`;
+  }
+
+  // 주요 업무
+  output += `\n[주요 업무]\n`;
+  output += hasIndent(mainTasks) ? formatLines(mainTasks) : toBullets(mainTasks);
+  output += '\n';
+
+  // 자격 요건
+  output += `\n[자격 요건]\n`;
+  output += hasIndent(requirements) ? formatLines(requirements) : toBullets(requirements);
+  output += '\n';
+
+  // 우대 사항
+  if (preferred) {
+    output += `\n[우대 사항]\n`;
+    output += hasIndent(preferred) ? formatLines(preferred) : toBullets(preferred);
+    output += '\n';
+  }
+
+  // 기술 스택
+  if (techStack) {
+    output += `\n[기술 스택]\n`;
+    output += toBullets(techStack);
+    output += '\n';
+  }
+
+  // 혜택 및 복지
+  output += `\n${benefits[selectedType]}\n`;
+
+  // 유의 사항
+  output += `\n${notice}`;
+
+  document.getElementById('outputArea').textContent = output;
+}
+
+// ── 복사 ──
+function copyOutput() {
+  const text = document.getElementById('outputArea').textContent;
+  if (!text || text.includes('왼쪽 폼을 채우고')) {
+    alert('먼저 공고를 생성해주세요.');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '복사 완료!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '복사하기'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// 모달 바깥 클릭 시 닫기
+document.getElementById('benefitModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBenefitModal();
+});
+document.getElementById('noticeModal').addEventListener('click', function(e) {
+  if (e.target === this) closeNoticeModal();
+});
+</script>
+
+</body>
+</html>
